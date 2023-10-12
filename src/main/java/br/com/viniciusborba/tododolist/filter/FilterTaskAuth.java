@@ -21,33 +21,38 @@ public class FilterTaskAuth extends OncePerRequestFilter {
   private IUserRepository userRepository;
 
   @Override
-  protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-    throws ServletException, IOException {
+  protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain filterChain)
+      throws ServletException, IOException {
 
-    var auth = req.getHeader("Authorization");
-    
-    var authEncoded = auth.substring("Basic".length()).trim();
+        var servletPath = req.getServletPath();
 
-    byte[] authDecode = Base64.getDecoder().decode(authEncoded);
+        if (servletPath.startsWith("/tasks/")) {
+          var authorization = req.getHeader("Authorization");
 
-    var authString = new String(authDecode);
+          var authEncoded = authorization.substring("Basic".length()).trim();
 
-    String[] credentials = authString.split(":");
-    String username = credentials[0];
-    String password = credentials[1];
-    
-    var user = this.userRepository.findByUsername(username);
+          byte[] authDecode = Base64.getDecoder().decode(authEncoded);
 
-    if (user == null) {
-      res.sendError(401);
-    } else {
-      var passwordVerify = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
-      
-      if (passwordVerify.verified) {
-        chain.doFilter(req, res); 
-      } else {
-        res.sendError(401);
-      }
-    }
+          var authString = new String(authDecode);
+
+          String[] credentials = authString.split(":");
+          String username = credentials[0];
+          String password = credentials[1];
+
+          var user = this.userRepository.findByUsername(username);
+          if(user == null) {
+            res.sendError(401, "Not allowed");
+          } else {
+            var passwordVerify = BCrypt.verifyer().verify(password.toCharArray(), user.getPassword());
+            if (passwordVerify.verified) {
+              req.setAttribute("userId", user.getId());
+              filterChain.doFilter(req, res);
+            } else {
+              res.sendError(401);
+            }
+          }
+        } else {
+          filterChain.doFilter(req, res);
+        }
   }
 }
