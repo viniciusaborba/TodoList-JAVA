@@ -63,11 +63,26 @@ public class TaskController {
   }
 
   @PutMapping("/{id}")
-  public TaskModel update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest req) {
+  public ResponseEntity update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest req) {
     var task = this.taskRepository.findById(id).orElse(null);
 
+    if(task == null) {
+      return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body("Resource not found!");
+    }
+
+    var userId = req.getAttribute("userId");
+
+    if(!task.getUserId().equals(userId)) {
+      return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body("Cannot change a task from another user");
+    }
     Utils.copyNonNullProperties(taskModel, task);
 
-    return this.taskRepository.save(task);
+    var taskUpdated = this.taskRepository.save(task);
+
+    return ResponseEntity.ok().body(taskUpdated);
   }
 }

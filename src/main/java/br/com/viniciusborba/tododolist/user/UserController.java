@@ -29,6 +29,6 @@ public class UserController {
     userModel.setPassword(hashedPassword);
     
     this.userRepository.save(userModel);
-    return ResponseEntity.status(200).body(null);
+    return ResponseEntity.status(201).body(null);
   }
 }
